@@ -42,17 +42,17 @@ class Memory3DApp:
         data = {}
 
         in_sids = ['detic:sync']
-        RECIPE_SID = 'event:recipe:id'
+        reset_sids = ['event:recipe:id', 'depthltCal']
         output_sid = 'detic:memory'
 
-        async with self.api.data_pull_connect(in_sids + [RECIPE_SID], ack=True) as ws_pull, \
+        async with self.api.data_pull_connect(in_sids + reset_sids, ack=True) as ws_pull, \
                 self.api.data_push_connect(output_sid, batch=True) as ws_push:
             mem = impl.MemoryHand()
             hand_detector = HandDetector()
             data.update(holoframe.load_all(self.api.data('depthltCal')))
             while True:
                 for sid, t, buffer in await ws_pull.recv_data():
-                    if sid == RECIPE_SID:
+                    if sid in reset_sids:
                         mem = impl.MemoryHand()
                         print("memory cleared")
                         continue

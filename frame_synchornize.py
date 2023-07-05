@@ -29,20 +29,20 @@ class FrameSyncApp:
 
         in_sids = ['main', 'depthlt']
         obj_sid = 'detic:image:for3d'
-        RECIPE_SID = 'event:recipe:id'
+        reset_sids = ['event:recipe:id', 'depthltCal']
         out_sid = 'detic:sync'
 
         rgb_frames = dicque(maxlen=20)
         depth_frames = dicque(maxlen=20)
         server_time_to_sensor_time = dicque(maxlen=20)
 
-        async with self.api.data_pull_connect(in_sids + [obj_sid] + [RECIPE_SID], ack=True) as ws_pull,\
+        async with self.api.data_pull_connect(in_sids + [obj_sid] + reset_sids, ack=True) as ws_pull,\
                     self.api.data_push_connect(out_sid, batch=True) as ws_push:
             while True:
                 for sid, t, buffer in await ws_pull.recv_data():
                     tms = int(t.split('-')[0])
 
-                    if sid == RECIPE_SID:
+                    if sid in reset_sids:
                         rgb_frames = dicque(maxlen=20)
                         depth_frames = dicque(maxlen=20)
                         server_time_to_sensor_time = dicque(maxlen=20)     
