@@ -30,13 +30,14 @@ class FrameSyncApp:
         in_sids = ['main', 'depthlt']
         obj_sid = 'detic:image:for3d'
         RECIPE_SID = 'event:recipe:id'
+        out_sid = 'detic:sync'
 
         rgb_frames = dicque(maxlen=20)
         depth_frames = dicque(maxlen=20)
         server_time_to_sensor_time = dicque(maxlen=20)
 
         async with self.api.data_pull_connect(in_sids + [obj_sid] + [RECIPE_SID], ack=True) as ws_pull,\
-                    self.api.data_push_connect('detic:sync', batch=True) as ws_push:
+                    self.api.data_push_connect(out_sid, batch=True) as ws_push:
             while True:
                 for sid, t, buffer in await ws_pull.recv_data():
                     tms = int(t.split('-')[0])
@@ -59,7 +60,7 @@ class FrameSyncApp:
                             continue
                         sensor_time = server_time_to_sensor_time[tms]
                         depth_frame = depth_frames[depth_frames.closest(sensor_time)]
-                        await ws_push.send_data([rgb_frames[sensor_time] + depth_frame + buffer])
+                        await ws_push.send_data([rgb_frames[sensor_time] + depth_frame + buffer], [out_sid], [t])
                     
 if __name__ == '__main__':
     import fire
