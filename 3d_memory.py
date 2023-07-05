@@ -55,6 +55,9 @@ class Memory3DApp:
                     if sid in reset_sids:
                         mem = impl.MemoryHand()
                         print("memory cleared")
+                        if sid == 'depthltCal':
+                            data['depthltCal'] = holoframe.load(buffer)
+                            print("depth calibration updated")
                         continue
 
                     tms = int(t.split('-')[0])
