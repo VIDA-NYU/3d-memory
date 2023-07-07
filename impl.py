@@ -33,6 +33,7 @@ class MemoryEntry:
         self.window_size = win_size
         self.bbox = bbox
         self.unseen_count = 0
+        self.status = 'tracked'
 
     def update(self, pos, label, confidence, timestamp, bbox = None, from_hand = False):
         self.pos = self.pos * (1-confidence) + pos * confidence
@@ -44,6 +45,8 @@ class MemoryEntry:
         self.last_seen = timestamp
         self.bbox = bbox
         self.unseen_count = 0
+        if self.status != 'hand':
+            self.status = 'tracked'
 
     def get_label(self):
         c = Counter(self.labels)
@@ -54,7 +57,7 @@ class MemoryEntry:
             self.id, self.pos, self.labels, self.confidence, self.last_seen)
 
     def to_dict(self):
-        return {'pos': self.pos.tolist(), 'id':self.id, 'label':self.get_label()}
+        return {'pos': self.pos.tolist(), 'id':self.id, 'label':self.get_label(), 'status':self.status}
 
 class MemoryHand:
     def __init__(self):
@@ -68,6 +71,9 @@ class MemoryHand:
         self.last_obj_id = None
 
     def update(self, detections, confidence, timestamp, intrinsics, world2pv_transform, img_shape, has_hands, hand_obj_boxes, hand_obj_det_ids, hand_obj_poses):
+        for i in self.objects.values():
+            i.status = 'outside'
+
         matching = {}
         matched_mem_key = set()
         # data association
@@ -99,10 +105,12 @@ class MemoryHand:
                         hand_matched[i] = True
                         self.objects[self.prev_obj_id[i]].update(hand_obj_pos, self.objects[self.prev_obj_id[i]].get_label(), 1, timestamp, bbox = hand_obj_box, from_hand = True)      
                         matched_mem_key.add(self.prev_obj_id[i])
+                        self.objects[self.prev_obj_id[i]].status = 'hand'
                     elif hand_obj_det_id is not None and hand_obj_det_id not in matching:
                         hand_matched[i] = True
                         matching[hand_obj_det_id] = self.prev_obj_id[i]
                         matched_mem_key.add(self.prev_obj_id[i])
+                        self.objects[self.prev_obj_id[i]].status = 'hand'
 
         for i in range(2):
             has_hand, hand_obj_box, hand_obj_det_id, hand_obj_pos = has_hands[i], hand_obj_boxes[i], hand_obj_det_ids[i], hand_obj_poses[i]
@@ -113,6 +121,7 @@ class MemoryHand:
                         if detections[hand_obj_det_id].label in self.objects[self.last_obj_id].labels:
                             matching[hand_obj_det_id] = self.last_obj_id
                             matched_mem_key.add(self.last_obj_id)
+                            self.objects[self.last_obj_id].status = 'hand'
                             hand_matched[i] = True
                             self.prev_obj_id[i] = self.last_obj_id
 
@@ -129,6 +138,7 @@ class MemoryHand:
                     mem_entry.pos, intrinsics, world2pv_transform, img_shape):
                 mem_entry.confidence -= self.unseen_penalty
                 mem_entry.unseen_count += 1
+                mem_entry.status = 'extended'
                 if mem_entry.confidence < 0:
                     to_remove.append(mem_k)
                 elif mem_entry.unseen_count > 5:
@@ -150,6 +160,7 @@ class MemoryHand:
                 hand_obj_det_id = hand_obj_det_ids[i]
                 if hand_obj_det_id is not None and hand_obj_det_id in matching:
                     self.last_obj_id = self.prev_obj_id[i] = matching[hand_obj_det_id]
+                    self.objects[self.prev_obj_id[i]].status = 'hand'
                 else:
                     self.prev_obj_id[i] = None
 
