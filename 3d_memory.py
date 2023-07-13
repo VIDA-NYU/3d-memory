@@ -151,7 +151,12 @@ class Memory3DApp:
                         0, rgb_frame['focalY'], rgb_frame['principalY']], [0, 0, 1]])
                     vis = mem.update(detections, 1, rgb_frame['time'],
                                 intrinsic_matrix, np.linalg.inv(rgb_frame['cam2world']), rgb_frame['image'].shape[:2], has_hand, hand_boxes, d_idxs, hand_obj_poses)
-                    await ws_push.send_data([orjson.dumps(mem.to_list())], [output_sid], [t])   
+                    mem_list = mem.to_list()
+                    for tracklet in mem_list:
+                        if tracklet["status"] != "outside":
+                            xy = utils.project_pos_to_pv(tracklet['pos'], rgb_frame['cam2world'], intrinsic_matrix, width)
+                            tracklet['xyxyn'] = [(xy[0]-30) / width, (xy[1]-30) / height, (xy[0]+30) / width, (xy[1]+30) / height]
+                    await ws_push.send_data([orjson.dumps(mem_list)], [output_sid], [t])   
 
                     
 
