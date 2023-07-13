@@ -156,7 +156,7 @@ class Memory3DApp:
                         if tracklet["status"] != "outside":
                             xy = utils.project_pos_to_pv(tracklet['pos'], rgb_frame['cam2world'], intrinsic_matrix, width)
                             tracklet['xyxyn'] = [(xy[0]-30) / width, (xy[1]-30) / height, (xy[0]+30) / width, (xy[1]+30) / height]
-                    await ws_push.send_data([orjson.dumps(mem_list)], [output_sid], [t])   
+                    await ws_push.send_data([orjson.dumps(mem_list, option=orjson.OPT_SERIALIZE_NUMPY)], [output_sid], [t])   
 
                     
 
