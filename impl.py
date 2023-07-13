@@ -117,8 +117,7 @@ class MemoryHand:
             if has_hand:
                 if self.last_obj_id is not None and self.last_obj_id in self.objects and self.last_obj_id not in matched_mem_key:
                     if hand_obj_det_id is not None and hand_obj_det_id not in matching:
-                        # if self.objects[self.last_obj_id].get_label() == detections[hand_obj_det_id].label:
-                        if detections[hand_obj_det_id].label in self.objects[self.last_obj_id].labels:
+                        if self.objects[self.last_obj_id].get_label() == detections[hand_obj_det_id].label:
                             matching[hand_obj_det_id] = self.last_obj_id
                             matched_mem_key.add(self.last_obj_id)
                             self.objects[self.last_obj_id].status = 'hand'
