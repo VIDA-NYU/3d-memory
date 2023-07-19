@@ -57,7 +57,7 @@ class MemoryEntry:
             self.id, self.pos, self.labels, self.confidence, self.last_seen)
 
     def to_dict(self):
-        return {'pos': self.pos.tolist(), 'id':self.id, 'label':self.get_label(), 'status':self.status}
+        return {'pos': self.pos.tolist(), 'id':self.id, 'label':self.get_label(), 'status':self.status, 'last_seen':self.last_seen}
 
 class MemoryHand:
     def __init__(self):
