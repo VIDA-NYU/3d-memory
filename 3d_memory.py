@@ -4,32 +4,9 @@ import impl
 import ptgctl
 import ptgctl.util
 from ptgctl import holoframe
-from collections import OrderedDict
-from hand_detector import HandDetector
 import json
 import orjson
 import struct
-
-def calculate_center(bb):
-    return [(bb[0] + bb[2])/2, (bb[1] + bb[3])/2]
-
-def filter_object(obj_dets, hand_dets):
-    filtered_object = []
-    object_cc_list = []
-    for j in range(obj_dets.shape[0]):
-        object_cc_list.append(calculate_center(obj_dets[j,:4]))
-    object_cc_list = np.array(object_cc_list)
-    img_obj_id = []
-    for i in range(hand_dets.shape[0]):
-        if hand_dets[i, 5] <= 0:
-            img_obj_id.append(-1)
-            continue
-        hand_cc = np.array(calculate_center(hand_dets[i,:4]))
-        point_cc = np.array([(hand_cc[0]+hand_dets[i,6]*10000*hand_dets[i,7]), (hand_cc[1]+hand_dets[i,6]*10000*hand_dets[i,8])])
-        dist = np.sum((object_cc_list - point_cc)**2,axis=1)
-        dist_min = np.argmin(dist)
-        img_obj_id.append(dist_min)
-    return img_obj_id
 
 class Memory3DApp:
     def __init__(self):
@@ -47,13 +24,12 @@ class Memory3DApp:
 
         async with self.api.data_pull_connect(in_sids + reset_sids, ack=True) as ws_pull, \
                 self.api.data_push_connect(output_sid, batch=True) as ws_push:
-            mem = impl.MemoryHand()
-            hand_detector = HandDetector()
+            mem = impl.Memory()
             data.update(holoframe.load_all(self.api.data('depthltCal')))
             while True:
                 for sid, t, buffer in await ws_pull.recv_data():
                     if sid in reset_sids:
-                        mem = impl.MemoryHand()
+                        mem = impl.Memory()
                         print("memory cleared")
                         if sid == 'depthltCal':
                             data['depthltCal'] = holoframe.load(buffer)
@@ -109,49 +85,13 @@ class Memory3DApp:
                             impl.PredictionEntry(pos_obj, label, o["confidence"], bbox = [x1,y1,x2,y2]))
                     nms_idx = new_nms_idx      
 
-                    obj_dets, hand_dets = hand_detector.predict(rgb_frame['image'][:,:,::-1])
-
-                    has_hand = [False, False]
-                    hand_boxes, d_idxs, hand_obj_poses = [None, None], [None, None], [None, None]
-
-                    if hand_dets is not None and obj_dets is not None:
-                        img_obj_id = filter_object(obj_dets, hand_dets)
-                        for hand_idx, i in enumerate(range(np.minimum(10, hand_dets.shape[0]))):
-                            lr = 1 if hand_dets[i, -1] != 0 else 0
-                            j = img_obj_id[i]                  
-                            hand_box = hand_boxes[lr] = obj_dets[j,:4]
-                            d_idx = None
-                            has_hand[lr] = True
-                            if detections:
-                                d_boxes = np.array([d.bbox for d in detections])
-                                xx1 = np.maximum(hand_box[0], d_boxes[:, 0])
-                                yy1 = np.maximum(hand_box[1], d_boxes[:, 1])
-                                xx2 = np.minimum(hand_box[2], d_boxes[:, 2])
-                                yy2 = np.minimum(hand_box[3], d_boxes[:, 3])
-                                w = np.maximum(0, xx2 - xx1)
-                                h = np.maximum(0, yy2 - yy1)
-                                intersection = w * h
-                                union = (hand_box[2] - hand_box[0]) * (hand_box[3] - hand_box[1]) + (d_boxes[:, 2] - d_boxes[:, 0]) * (d_boxes[:, 3] - d_boxes[:, 1]) - intersection
-                                iou = intersection / union
-                                idx = np.argmax(iou)
-                                if iou[idx] > 0.7:
-                                    d_idx = idx
-                                    detections[d_idx].hand = True
-                                    d_idxs[lr] = d_idx
-
-                            if d_idx is None:
-                                x1, y1, x2, y2 = obj_dets[0,:4].astype(int)
-                                pos_obj = pos_image[y1:y2, x1:x2, :]
-                                mask_obj = mask[y1:y2, x1:x2]
-                                pos_obj = pos_obj[mask_obj]
-                                if pos_obj.shape[0] != 0:
-                                    hand_obj_poses[lr] = pos_obj.mean(axis=0)      
-
                     intrinsic_matrix = np.array([[rgb_frame['focalX'], 0, width-rgb_frame['principalX']], [
                         0, rgb_frame['focalY'], rgb_frame['principalY']], [0, 0, 1]])
-                    vis = mem.update(detections, 1, rgb_frame['time'],
-                                intrinsic_matrix, np.linalg.inv(rgb_frame['cam2world']), rgb_frame['image'].shape[:2], has_hand, hand_boxes, d_idxs, hand_obj_poses)
+
+                    mem.update(detections, rgb_frame['time'],
+                                intrinsic_matrix, np.linalg.inv(rgb_frame['cam2world']), rgb_frame['image'].shape[:2])
                     mem_list = mem.to_list()
+
                     for tracklet in mem_list:
                         if tracklet["status"] != "outside":
                             xy = utils.project_pos_to_pv(tracklet['pos'], rgb_frame['cam2world'], intrinsic_matrix, width)
