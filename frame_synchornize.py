@@ -24,12 +24,12 @@ class FrameSyncApp:
                               url="http://172.24.113.199:7890")
 
     @ptgctl.util.async2sync
-    async def run(self, prefix=None):
+    async def run(self, prefix=None, track_all_objects=True):
         data = {}
 
         in_sids = ['main', 'depthlt']
-        obj_sid = 'detic:image:for3d'
-        reset_sids = ['event:recipe:id', 'depthltCal']
+        obj_sid = 'detic:image:misc:for3d' if track_all_objects else 'detic:image:for3d'
+        reset_sids = ['depthltCal']
         out_sid = 'detic:sync'
 
         rgb_frames = dicque(maxlen=20)
