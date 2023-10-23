@@ -15,13 +15,14 @@ LAMBDA = 2
 BOUNDARY_OFFSET = 20
 UNSEEN_PENALTY = 1
 
+
 class PredictionEntry:
-    def __init__(self, pos, label, confidence, bbox):
+    def __init__(self, pos, label, confidence, detection):
         self.pos = pos
         self.label = label
         self.confidence = confidence
         self.hand = False
-        self.bbox = bbox
+        self.detection = detection
 
     def __repr__(self):
         return "pos: {}, label: {}, conf: {}".format(
@@ -29,9 +30,9 @@ class PredictionEntry:
 
 
 class MemoryEntry:
-    def __init__(self, id, pos, label, timestamp, win_size, bbox):
+    def __init__(self, id, pos, label, timestamp, win_size, detection):
         self.id = id
-        self.bbox = bbox
+        self.detection = detection
         self.pos = pos
         self.label_count = Counter([label])
         self.labels = deque([label])
@@ -39,11 +40,10 @@ class MemoryEntry:
         self.window_size = win_size
         self.count = 0
         self.unseen_count = 0
-        self.status = 'tracked'
 
-    def update(self, pos, label, timestamp, bbox):
+    def update(self, pos, label, timestamp, detection):
         self.pos = pos
-        self.bbox = bbox
+        self.detection = detection
 
         self.labels.append(label)
         self.label_count[label] += 1
@@ -52,11 +52,10 @@ class MemoryEntry:
             self.label_count[l] -= 1
             if self.label_count[l] == 0:
                 del self.label_count[l]
- 
+
         self.count += 1
         self.last_seen = timestamp
         self.unseen_count = 0
-        self.status = 'tracked'
 
     def get_label(self):
         return self.label_count.most_common(1)[0][0]
@@ -66,7 +65,7 @@ class MemoryEntry:
             self.id, self.pos, self.labels, self.count, self.last_seen)
 
     def to_dict(self):
-        return {'pos': self.pos.tolist(), 'id': self.id, 'label': self.get_label(), 'last_seen': self.last_seen, 'status':self.status}
+        return {'pos': self.pos.tolist(), 'id': self.id, 'label': self.get_label(), 'last_seen': self.last_seen}
 
 
 class Memory:
@@ -82,9 +81,6 @@ class Memory:
         self.beta = LAMBDA
 
     def update(self, detections, timestamp, intrinsics, world2pv_transform, img_shape, **kwargs):
-        for i in self.objects.values():
-            i.status = 'outside'
-
         # calculate similarity
         scores = []
         for idx, d in enumerate(detections):
@@ -108,14 +104,13 @@ class Memory:
         for det_i, mem_key in matching.items():
             d = detections[det_i]
             self.objects[mem_key].update(
-                d.pos, d.label, timestamp, d.bbox)
+                d.pos, d.label, timestamp, d.detection)
 
         # unseen objects:
         to_remove = []
         for mem_k, mem_entry in self.objects.items():
             if mem_k not in matched_mem_key and checkInsideFOV(
                     mem_entry.pos, intrinsics, world2pv_transform, img_shape):
-                mem_entry.status = 'extended'
                 mem_entry.count -= self.unseen_penalty
                 mem_entry.unseen_count += 1
                 if mem_entry.count < 0 or mem_entry.unseen_count > self.max_unseen_count:
@@ -127,9 +122,48 @@ class Memory:
         for det_i, d in enumerate(detections):
             if det_i not in matching and detections[det_i].confidence > self.new_tracklet_threshold:
                 self.objects[self.id] = MemoryEntry(
-                    self.id, d.pos, d.label, timestamp, self.window_size, d.bbox)
+                    self.id, d.pos, d.label, timestamp, self.window_size, d.detection)
+                matching[det_i] = self.id
                 self.id += 1
 
+        res = [self.objects[i].to_dict() for i in matching.values()]
+        for i in res:
+            self.generate_output(i, intrinsics, world2pv_transform, img_shape)
+
+        outside = [obj.to_dict() for obj in self.objects.values(
+        ) if obj.id not in matching and not checkInsideFOV(obj.pos, intrinsics, world2pv_transform, img_shape)]
+        for i in outside:
+            self.mark_outside(i)
+
+        return res + outside
+
+    def interpolate(self, intrinsics, world2pv_transform, img_shape, **kwargs):
+        res = [i.to_dict()
+               for i in self.objects.values() if i.unseen_count == 0]
+        for i in res:
+            if checkInsideFOV(i['pos'], intrinsics, world2pv_transform, img_shape):
+                self.generate_output(
+                    i, intrinsics, world2pv_transform, img_shape, replay_bbox=False)
+            else:
+                self.mark_outside(i)
+        return res
+
+    def generate_output(self, mem_entry, intrinsics, world2pv_transform, img_shape, replay_bbox=True):
+        mem_entry['status'] = 'tracked'
+        xy = utils.project_pos_to_pv(
+            mem_entry['pos'], world2pv_transform, intrinsics, img_shape[1])
+        height, width = img_shape
+        mem_entry['xyxyn'] = [(xy[0]-30) / width, (xy[1]-30) /
+                              height, (xy[0]+30) / width, (xy[1]+30) / height]
+        det = self.objects[mem_entry['id']].detection
+        if replay_bbox:
+            mem_entry['xyxyn_det'] = det['xyxyn']
+        for k in ['state']:
+            if k in det:
+                mem_entry[k] = det[k]
+
+    def mark_outside(self, mem_entry):
+        mem_entry['status'] = 'outside'
 
     def to_list(self):
         return [obj.to_dict() for obj in self.objects.values()]
@@ -196,22 +230,27 @@ def align_depth_to_rgb(img, img_json, depth_img, depth_json, depth_calibration):
     return pos_image, mask
 
 
-def nms(results, shape, threshold=0.4):
+def convert_detection_to_3d_pos(detection, pos_image, mask):
+    x1, y1, x2, y2 = int(detection['xyxy'][0]), int(detection['xyxy'][1]), int(
+        detection['xyxy'][2]), int(detection['xyxy'][3])
+    mask_obj = mask[y1:y2, x1:x2]
+    pos_obj = pos_image[y1:y2, x1:x2, :][mask_obj]
+    if pos_obj.shape[0] == 0:
+        return None
+    return pos_obj.mean(axis=0)
+
+
+def nms(results, threshold=0.4):
     if len(results) == 0:
         return []
-    height, width = shape
+
     boxes = np.zeros((len(results), 4))
     class_to_ids = defaultdict(list)
     scores = np.zeros(len(results))
     for i, res in enumerate(results):
-        if res["label"] in {'person'}:
-            continue
         class_to_ids[res["label"]].append(i)
         scores[i] = res["confidence"]
-        xyxyn = res["xyxyn"]
-        y1, y2, x1, x2 = int(
-            xyxyn[1]*height), int(xyxyn[3]*height), int(xyxyn[0]*width), int(xyxyn[2]*width)
-        boxes[i, :] = [x1, y1, x2, y2]
+        boxes[i, :] = res["xyxy"]
 
     x1 = boxes[:, 0]  # x coordinate of the top-left corner
     y1 = boxes[:, 1]  # y coordinate of the top-left corner

@@ -112,11 +112,14 @@ def project_on_pv(points, pv_img, pv2world_transform, focal_length, principal_po
 
     return pos_image, valid_mask
 
+
 rvec = np.zeros(3)
 tvec = np.zeros(3)
-def project_pos_to_pv(pos, cam2world, intrinsic_matrix, width):
+
+
+def project_pos_to_pv(pos, world2pv, intrinsic_matrix, width):
     p = np.hstack((pos, [1]))
-    p = np.linalg.inv(cam2world) @ p
+    p = world2pv @ p
     xy, _ = cv2.projectPoints(
         p[:3], rvec, tvec, intrinsic_matrix, None)
     xy = np.squeeze(xy)
