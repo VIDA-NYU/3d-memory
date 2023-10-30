@@ -60,7 +60,7 @@ class Memory3DApp:
         data = {}
 
         in_sids = ['detic:sync']
-        reset_sids = ['depthltCal']
+        reset_sids = ['depthltCal', 'arui:reset']
         output_sid = 'detic:memory'
 
         self.ignore_labels = {'toothpicks',
