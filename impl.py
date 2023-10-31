@@ -5,8 +5,8 @@ import cv2
 import utils
 
 SCORE_THRESHOLD = 1.4
-MAX_UNSEEN_COUNT = 5
-LABEL_WINDOW_SIZE = 15
+MAX_UNSEEN_COUNT = 10
+LABEL_WINDOW_SIZE = 5
 NEW_TRACKLET_THRESHOLD = 0.6
 
 ALPHA = 5
@@ -34,8 +34,8 @@ class MemoryEntry:
         self.id = id
         self.detection = detection
         self.pos = pos
-        self.label_count = Counter([label])
-        self.labels = deque([label])
+        self.label_count = Counter([label, label])
+        self.labels = deque([label, label])
         self.last_seen = timestamp
         self.window_size = win_size
         self.count = 0
@@ -193,7 +193,7 @@ class Memory:
         return np.exp(self.alpha * -np.linalg.norm(pred.pos - mem.pos))
 
     def getLabelScore(self, pred: PredictionEntry, mem: MemoryEntry):
-        return pred.confidence * mem.label_count[pred.label] / self.window_size
+        return pred.confidence * mem.label_count[pred.label] / self.window_size * self.score_threshold
 
 
 class BaselineMemory(Memory):
