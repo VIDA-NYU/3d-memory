@@ -150,7 +150,7 @@ class Memory:
         res = [i.to_dict() for i in self.objects.values()]
         for i in res:
             if checkInsideFOV(i['pos'], intrinsics, world2pv_transform, img_shape):
-                if self.objects[i['id']].unseen_count != 0:
+                if self.objects[i['id']].unseen_count == 0:
                     self.generate_output(i, intrinsics, world2pv_transform, img_shape, replay_bbox=False)
                 else:
                     self.mark_status(i, 'extended')
