@@ -130,22 +130,32 @@ class Memory:
         for i in res:
             self.generate_output(i, intrinsics, world2pv_transform, img_shape)
 
-        outside = [obj.to_dict() for obj in self.objects.values(
-        ) if obj.id not in matching and not checkInsideFOV(obj.pos, intrinsics, world2pv_transform, img_shape)]
-        for i in outside:
-            self.mark_outside(i)
+        remains = set(self.objects) - set(matching.values())
+        outside = []
+        extended = []
 
-        return res + outside
+        for idx in remains:
+            obj = self.objects[idx]
+            obj_dict = obj.to_dict()
+            if checkInsideFOV(obj.pos, intrinsics, world2pv_transform, img_shape):
+                self.mark_status(obj_dict, 'extended')
+                extended.append(obj_dict)
+            else:
+                self.mark_status(obj_dict, 'outside')
+                outside.append(obj_dict)
+
+        return res + extended + outside
 
     def interpolate(self, intrinsics, world2pv_transform, img_shape, **kwargs):
-        res = [i.to_dict()
-               for i in self.objects.values() if i.unseen_count == 0]
+        res = [i.to_dict() for i in self.objects.values()]
         for i in res:
             if checkInsideFOV(i['pos'], intrinsics, world2pv_transform, img_shape):
-                self.generate_output(
-                    i, intrinsics, world2pv_transform, img_shape, replay_bbox=False)
+                if self.objects[i['id']].unseen_count != 0:
+                    self.generate_output(i, intrinsics, world2pv_transform, img_shape, replay_bbox=False)
+                else:
+                    self.mark_status(i, 'extended')
             else:
-                self.mark_outside(i)
+                self.mark_status(i, 'outside')
         return res
 
     def generate_output(self, mem_entry, intrinsics, world2pv_transform, img_shape, replay_bbox=True):
@@ -162,8 +172,8 @@ class Memory:
             if k in det:
                 mem_entry[k] = det[k]
 
-    def mark_outside(self, mem_entry):
-        mem_entry['status'] = 'outside'
+    def mark_status(self, mem_entry, status):
+        mem_entry['status'] = status
 
     def to_list(self):
         return [obj.to_dict() for obj in self.objects.values()]
