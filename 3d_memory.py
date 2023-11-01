@@ -39,6 +39,8 @@ class Memory3DApp:
         print("memory initialized")
 
     def filter_detection(self, detection):
+        if self.label_filtering and detection['label'] not in self.key_labels:
+            return True
         if detection['label'] in self.ignore_labels:
             return True
         x1, y1, x2, y2 = detection['xyxy']
@@ -56,7 +58,7 @@ class Memory3DApp:
         return [o for o in detic_result if not self.filter_detection(o)]
 
     @ptgctl.util.async2sync
-    async def run(self, prefix=None):
+    async def run(self, prefix=None, label_filtering=True):
         data = {}
 
         in_sids = ['detic:sync']
@@ -65,6 +67,10 @@ class Memory3DApp:
 
         self.ignore_labels = {'toothpicks',
                               'jar_lid', 'person', 'banana_slice'}
+
+        self.label_filtering = label_filtering
+        self.key_labels = {'plate', 'bowl', 'microwave_oven', 'tortilla', 'tortilla_package'}
+
         async with self.api.data_pull_connect(in_sids + reset_sids, ack=True) as ws_pull, \
                 self.api.data_push_connect(output_sid, batch=True) as ws_push:
             data.update(holoframe.load_all(self.api.data('depthltCal')))
