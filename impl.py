@@ -65,7 +65,7 @@ class MemoryEntry:
             self.id, self.pos, self.labels, self.count, self.last_seen)
 
     def to_dict(self):
-        return {'pos': self.pos.tolist(), 'id': self.id, 'label': self.get_label(), 'last_seen': self.last_seen}
+        return {'pos': self.pos.tolist(), 'id': self.id, 'label': self.get_label(), 'last_seen': self.last_seen, 'active': True if self.unseen_count == 0 else False}
 
 
 class Memory:
@@ -177,6 +177,10 @@ class Memory:
 
     def mark_status(self, mem_entry, status):
         mem_entry['status'] = status
+        det = self.objects[mem_entry['id']].detection
+        for k in ['state']:
+            if k in det:
+                mem_entry[k] = det[k]
 
     def to_list(self):
         return [obj.to_dict() for obj in self.objects.values()]
