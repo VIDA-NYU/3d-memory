@@ -86,7 +86,9 @@ class Memory:
         for idx, d in enumerate(detections):
             for k, o in self.objects.items():
                 score = self.getScore(d, o)
-                if score > self.score_threshold or (self.xmemScore(d, o) and d.label == 'bowl'):
+                if self.xmemScore(d, o) and d.label == 'bowl':
+                    score += self.score_threshold
+                if score > self.score_threshold:
                     scores.append((-score, idx, k))
 
         # data association
