@@ -36,6 +36,7 @@ class MemoryEntry:
         self.pos = pos
         self.label_count = Counter([label, label])
         self.labels = deque([label, label])
+        self.label = label
         self.last_seen = timestamp
         self.window_size = win_size
         self.count = 1
@@ -53,12 +54,15 @@ class MemoryEntry:
             if self.label_count[l] == 0:
                 del self.label_count[l]
 
+        self.label = None
         self.count += 1
         self.last_seen = timestamp
         self.unseen_count = 0
 
     def get_label(self):
-        return self.label_count.most_common(1)[0][0]
+        if self.label is None:
+            self.label = self.label_count.most_common(1)[0][0]
+        return self.label
 
     def __repr__(self):
         return "id: {}, pos: {}, labels: {}, conf: {}, last_seen: {}".format(
