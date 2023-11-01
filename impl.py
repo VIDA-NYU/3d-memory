@@ -182,14 +182,14 @@ class Memory:
         det = self.objects[mem_entry['id']].detection
         if replay_bbox:
             mem_entry['xyxyn_det'] = det['xyxyn']
-        for k in ['state', 'hand_object_interaction', 'hand_object']:
+        for k in ['state', 'hand_object_interaction', 'hand_object', 'segment_track_id']:
             if k in det:
                 mem_entry[k] = det[k]
 
     def mark_status(self, mem_entry, status):
         mem_entry['status'] = status
         det = self.objects[mem_entry['id']].detection
-        for k in ['state']:
+        for k in ['state', 'segment_track_id']:
             if k in det:
                 mem_entry[k] = det[k]
 
