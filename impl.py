@@ -86,7 +86,7 @@ class Memory:
         for idx, d in enumerate(detections):
             for k, o in self.objects.items():
                 score = self.getScore(d, o)
-                if score > self.score_threshold:
+                if score > self.score_threshold or (self.xmemScore(d, o) and d.label == 'bowl'):
                     scores.append((-score, idx, k))
 
         # data association
@@ -195,6 +195,11 @@ class Memory:
 
     def getLabelScore(self, pred: PredictionEntry, mem: MemoryEntry):
         return pred.confidence * mem.label_count[pred.label] / self.window_size * self.score_threshold
+
+    def xmemScore(self, pred: PredictionEntry, mem: MemoryEntry):
+        if 'segment_track_id' in pred.detection and 'segment_track_id' in mem.detection and pred.detection['segment_track_id'] == mem.detection['segment_track_id']:
+            return True
+        return False
 
 
 class BaselineMemory(Memory):
