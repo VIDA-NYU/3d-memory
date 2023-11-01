@@ -14,6 +14,7 @@ LAMBDA = 2
 
 BOUNDARY_OFFSET = 20
 UNSEEN_PENALTY = 1
+RESPAWN_DISTANCE_THRESHOLD = 0.15
 
 
 class PredictionEntry:
@@ -84,6 +85,8 @@ class Memory:
         self.alpha = ALPHA
         self.beta = LAMBDA
 
+        self.archived_objects = {}
+
     def update(self, detections, timestamp, intrinsics, world2pv_transform, img_shape, **kwargs):
         # calculate similarity
         scores = []
@@ -125,12 +128,24 @@ class Memory:
         # new objects:
         for det_i, d in enumerate(detections):
             if det_i not in matching and detections[det_i].confidence > self.new_tracklet_threshold:
+                archived_candidate, min_distance = None, RESPAWN_DISTANCE_THRESHOLD
+                for k, obj in self.archived_objects.items():
+                    if obj.label == d.label and np.linalg.norm(obj.pos - d.pos) < min_distance:
+                        archived_candidate, min_distance = k, np.linalg.norm(obj.pos - d.pos)
+                if archived_candidate is not None:
+                    self.objects[archived_candidate] = self.archived_objects[archived_candidate]
+                    matching[det_i] = archived_candidate
+                    del self.archived_objects[archived_candidate]
+                    continue
+
                 self.objects[self.id] = MemoryEntry(
                     self.id, d.pos, d.label, timestamp, self.window_size, d.detection)
                 matching[det_i] = self.id
                 self.id += 1
 
         for k in to_remove:
+            if len(self.objects[k].labels) == self.window_size:
+                self.archived_objects[k] = self.objects[k]
             del self.objects[k]
 
         
