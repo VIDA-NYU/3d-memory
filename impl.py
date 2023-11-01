@@ -129,28 +129,20 @@ class Memory:
         for k in to_remove:
             del self.objects[k]
 
-        res = [self.objects[i].to_dict() for i in matching.values()]
+        
+        res = [i.to_dict() for i in self.objects.values() if len(i.labels) > 2]
         for i in res:
-            self.generate_output(i, intrinsics, world2pv_transform, img_shape)
-
-        remains = set(self.objects) - set(matching.values())
-        outside = []
-        extended = []
-
-        for idx in remains:
-            obj = self.objects[idx]
-            obj_dict = obj.to_dict()
-            if checkInsideFOV(obj.pos, intrinsics, world2pv_transform, img_shape):
-                self.mark_status(obj_dict, 'extended')
-                extended.append(obj_dict)
+            if i['id'] in matching.values():
+                self.generate_output(i, intrinsics, world2pv_transform, img_shape)
+            elif checkInsideFOV(i['pos'], intrinsics, world2pv_transform, img_shape):
+                self.mark_status(i, 'extended')
             else:
-                self.mark_status(obj_dict, 'outside')
-                outside.append(obj_dict)
-
-        return res + extended + outside
+                self.mark_status(i, 'outside')
+                
+        return res
 
     def interpolate(self, intrinsics, world2pv_transform, img_shape, **kwargs):
-        res = [i.to_dict() for i in self.objects.values()]
+        res = [i.to_dict() for i in self.objects.values() if len(i.labels) > 2]
         for i in res:
             if checkInsideFOV(i['pos'], intrinsics, world2pv_transform, img_shape):
                 if self.objects[i['id']].unseen_count == 0:
