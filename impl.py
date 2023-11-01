@@ -38,7 +38,7 @@ class MemoryEntry:
         self.labels = deque([label, label])
         self.last_seen = timestamp
         self.window_size = win_size
-        self.count = 0
+        self.count = 1
         self.unseen_count = 0
 
     def update(self, pos, label, timestamp, detection):
@@ -115,8 +115,6 @@ class Memory:
                 mem_entry.unseen_count += 1
                 if mem_entry.count < 0 or mem_entry.unseen_count > self.max_unseen_count:
                     to_remove.append(mem_k)
-        for k in to_remove:
-            del self.objects[k]
 
         # new objects:
         for det_i, d in enumerate(detections):
@@ -125,6 +123,9 @@ class Memory:
                     self.id, d.pos, d.label, timestamp, self.window_size, d.detection)
                 matching[det_i] = self.id
                 self.id += 1
+
+        for k in to_remove:
+            del self.objects[k]
 
         res = [self.objects[i].to_dict() for i in matching.values()]
         for i in res:
