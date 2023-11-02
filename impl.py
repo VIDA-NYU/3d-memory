@@ -184,7 +184,7 @@ class Memory:
         det = self.objects[mem_entry['id']].detection
         if replay_bbox:
             mem_entry['xyxyn_det'] = det['xyxyn']
-        for k in ['state', 'hand_object_interaction', 'hand_object', 'segment_track_id']:
+        for k in ['state', 'hand_object_interaction', 'segment_track_id']:
             if k in det:
                 mem_entry[k] = det[k]
 
