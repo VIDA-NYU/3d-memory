@@ -6,7 +6,7 @@ import utils
 
 SCORE_THRESHOLD = 1.4
 MAX_UNSEEN_COUNT = 10
-LABEL_WINDOW_SIZE = 5
+LABEL_WINDOW_SIZE = 6
 NEW_TRACKLET_THRESHOLD = 0.6
 
 ALPHA = 5
@@ -15,6 +15,7 @@ LAMBDA = 2
 BOUNDARY_OFFSET = 20
 UNSEEN_PENALTY = 1
 RESPAWN_DISTANCE_THRESHOLD = 0.15
+RESPAWN_HAND_DISTANCE_THRESHOLD = 1
 
 
 class PredictionEntry:
@@ -128,12 +129,13 @@ class Memory:
         # new objects:
         for det_i, d in enumerate(detections):
             if det_i not in matching and detections[det_i].confidence > self.new_tracklet_threshold:
-                archived_candidate, min_distance = None, RESPAWN_DISTANCE_THRESHOLD
+                archived_candidate, min_distance = None, RESPAWN_HAND_DISTANCE_THRESHOLD
                 for k, obj in self.archived_objects.items():
-                    if obj.label == d.label and np.linalg.norm(obj.pos - d.pos) < min_distance:
+                    if obj.label == d.label and np.linalg.norm(obj.pos - d.pos) < (min_distance if 'hand_object_interaction' in d.detection and d.detection['hand_object_interaction'] > 0.5 else min(min_distance, RESPAWN_DISTANCE_THRESHOLD)):
                         archived_candidate, min_distance = k, np.linalg.norm(obj.pos - d.pos)
                 if archived_candidate is not None:
                     self.objects[archived_candidate] = self.archived_objects[archived_candidate]
+                    self.objects[archived_candidate].update(d.pos, d.label, timestamp, d.detection)
                     matching[det_i] = archived_candidate
                     del self.archived_objects[archived_candidate]
                     continue
