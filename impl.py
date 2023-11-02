@@ -93,7 +93,7 @@ class Memory:
         for idx, d in enumerate(detections):
             for k, o in self.objects.items():
                 score = self.getScore(d, o)
-                if self.xmemScore(d, o) and d.label == 'bowl':
+                if self.xmemScore(d, o) and (d.label == 'bowl' or d.label in {'plate', 'tortilla'} and 'hand_object_interaction' in d.detection and d.detection['hand_object_interaction'] > 0.5):
                     score += self.score_threshold
                 if score > self.score_threshold:
                     scores.append((-score, idx, k))
