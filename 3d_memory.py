@@ -88,14 +88,11 @@ class Memory3DApp:
 
                     rgb_frame, depth_frame, detic_result = decode_buffer(
                         buffer)
-                    height, width = rgb_frame['image'].shape[:2]
-                    intrinsic_matrix = np.array([[rgb_frame['focalX'], 0, width-rgb_frame['principalX']], [
-                                                0, rgb_frame['focalY'], rgb_frame['principalY']], [0, 0, 1]])
 
-                    if detic_result['objects'] is None:
-                        res = self.mem.interpolate(intrinsic_matrix, np.linalg.inv(
-                            rgb_frame['cam2world']), rgb_frame['image'].shape[:2])
-                    else:
+                    if detic_result['objects'] is not None:
+                        height, width = rgb_frame['image'].shape[:2]
+                        intrinsic_matrix = np.array([[rgb_frame['focalX'], 0, width-rgb_frame['principalX']], [
+                                                0, rgb_frame['focalY'], rgb_frame['principalY']], [0, 0, 1]])
                         depth_points = utils.get_points_in_cam_space(
                             depth_frame['image'], data['depthltCal']['lut'])
                         xyz, _ = utils.cam2world(
