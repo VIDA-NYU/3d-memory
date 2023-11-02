@@ -58,6 +58,8 @@ class FrameSyncApp:
                         if tms not in server_time_to_sensor_time:
                             print("tms:{} not found".format(tms))
                             continue
+                        if len(depth_frames) == 0:
+                            continue
                         sensor_time = server_time_to_sensor_time[tms]
                         depth_frame = depth_frames[depth_frames.closest(sensor_time)]
                         await ws_push.send_data([rgb_frames[sensor_time] + depth_frame + buffer], [out_sid], [t])
