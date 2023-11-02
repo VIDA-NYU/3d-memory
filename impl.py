@@ -216,9 +216,7 @@ class Memory:
         return pred.confidence * mem.label_count[pred.label] / self.window_size * self.score_threshold
 
     def xmemScore(self, pred: PredictionEntry, mem: MemoryEntry):
-        if 'segment_track_id' in pred.detection and 'segment_track_id' in mem.detection and pred.detection['segment_track_id'] == mem.detection['segment_track_id']:
-            return True
-        return False
+        return 'segment_track_id' in pred.detection and 'segment_track_id' in mem.detection and pred.detection['segment_track_id'] == mem.detection['segment_track_id']
 
 
 class BaselineMemory(Memory):
