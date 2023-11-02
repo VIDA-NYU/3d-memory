@@ -69,7 +69,7 @@ class Memory3DApp:
                               'jar_lid', 'person', 'banana_slice'}
 
         self.label_filtering = label_filtering
-        self.key_labels = {'plate', 'bowl', 'microwave_oven', 'tortilla', 'tortilla_package'}
+        self.key_labels = {'plate', 'bowl', 'microwave_oven', 'tortilla', 'tortilla_package', 'mug'}
 
         async with self.api.data_pull_connect(in_sids + reset_sids, ack=True) as ws_pull, \
                 self.api.data_push_connect(output_sid, batch=True) as ws_push:
