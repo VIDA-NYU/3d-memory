@@ -4,7 +4,7 @@ import heapq
 import cv2
 import utils
 
-SCORE_THRESHOLD = 1.4
+SCORE_THRESHOLD = 1.3
 MAX_UNSEEN_COUNT = 10
 LABEL_WINDOW_SIZE = 6
 NEW_TRACKLET_THRESHOLD = 0.6
@@ -213,7 +213,7 @@ class Memory:
         return np.exp(self.alpha * -np.linalg.norm(pred.pos - mem.pos))
 
     def getLabelScore(self, pred: PredictionEntry, mem: MemoryEntry):
-        return pred.confidence * mem.label_count[pred.label] / self.window_size * self.score_threshold
+        return min(0.9, pred.confidence) * mem.label_count[pred.label] / self.window_size * self.score_threshold
 
     def xmemScore(self, pred: PredictionEntry, mem: MemoryEntry):
         return 'segment_track_id' in pred.detection and 'segment_track_id' in mem.detection and pred.detection['segment_track_id'] == mem.detection['segment_track_id']
