@@ -7,6 +7,10 @@ from ptgctl import holoframe
 import json
 import orjson
 import struct
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 format_str = "<BBQIIII"
 header_size = struct.calcsize(format_str)
@@ -36,7 +40,7 @@ class Memory3DApp:
 
     def reset_memory(self):
         self.mem = impl.Memory()
-        print("memory initialized")
+        logger.info("memory initialized")
 
     def filter_detection(self, detection):
         if self.label_filtering and detection['label'] not in self.key_labels:
@@ -81,7 +85,7 @@ class Memory3DApp:
                         self.reset_memory()
                         if sid == 'depthltCal':
                             data['depthltCal'] = holoframe.load(buffer)
-                            print("depth calibration updated")
+                            logger.info("depth calibration updated")
                         continue
 
                     tms = int(t.split('-')[0])

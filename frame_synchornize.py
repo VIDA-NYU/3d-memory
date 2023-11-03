@@ -2,6 +2,10 @@ import ptgctl
 import ptgctl.util
 from ptgctl import holoframe
 from collections import OrderedDict
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class dicque(OrderedDict):
     def __init__(self, *a, maxlen=0, **kw):
@@ -46,7 +50,7 @@ class FrameSyncApp:
                         rgb_frames = dicque(maxlen=20)
                         depth_frames = dicque(maxlen=20)
                         server_time_to_sensor_time = dicque(maxlen=20)     
-                        print("sync cleared")                  
+                        logger.info("sync cleared")                  
                     elif sid == 'depthlt':
                         d = holoframe.load(buffer, only_header=True)
                         depth_frames[d['time']] = buffer
@@ -56,7 +60,7 @@ class FrameSyncApp:
                         server_time_to_sensor_time[tms] = d['time']
                     elif sid == obj_sid:
                         if tms not in server_time_to_sensor_time:
-                            print("tms:{} not found".format(tms))
+                            logger.info("tms:{} not found".format(tms))
                             continue
                         if len(depth_frames) == 0:
                             continue
