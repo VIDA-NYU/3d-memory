@@ -99,6 +99,9 @@ class Memory3DApp:
                                                 0, rgb_frame['focalY'], rgb_frame['principalY']], [0, 0, 1]])
                         depth_points = utils.get_points_in_cam_space(
                             depth_frame['image'], data['depthltCal']['lut'])
+                        if depth_points.shape[0] == 0:
+                            logger.info('No match point for main:{} and depth:{}'.format(rgb_frame['time'], depth_frame['time']))
+                            continue
                         xyz, _ = utils.cam2world(
                             depth_points, data['depthltCal']['rig2cam'], depth_frame['rig2world'])
                         pos_image, mask = utils.project_on_pv(
