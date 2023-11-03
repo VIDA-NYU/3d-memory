@@ -118,7 +118,7 @@ class Memory3DApp:
                         res = self.mem.update(detections, rgb_frame['time'], intrinsic_matrix, np.linalg.inv(
                             rgb_frame['cam2world']), rgb_frame['image'].shape[:2])
 
-                    await ws_push.send_data([orjson.dumps(res, option=orjson.OPT_SERIALIZE_NUMPY)], [output_sid], [t])
+                        await ws_push.send_data([orjson.dumps(res, option=orjson.OPT_SERIALIZE_NUMPY)], [output_sid], [t])
 
 
 if __name__ == '__main__':
