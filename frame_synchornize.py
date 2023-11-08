@@ -24,8 +24,7 @@ class dicque(OrderedDict):
 class FrameSyncApp:
     def __init__(self):
         self.api = ptgctl.API(username="test",
-                              password="test",
-                              url="http://172.24.113.199:7890")
+                              password="test")
 
     @ptgctl.util.async2sync
     async def run(self, prefix=None, track_all_objects=True):

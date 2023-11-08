@@ -35,8 +35,7 @@ def decode_buffer(buffer):
 class Memory3DApp:
     def __init__(self):
         self.api = ptgctl.API(username="test",
-                              password="test",
-                              url="http://172.24.113.199:7890")
+                              password="test")
 
     def reset_memory(self):
         self.mem = impl.Memory()
