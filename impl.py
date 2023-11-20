@@ -94,7 +94,7 @@ class Memory:
         for idx, d in enumerate(detections):
             for k, o in self.objects.items():
                 score = self.getScore(d, o)
-                if self.xmemScore(d, o) and {'plate', 'tortilla', 'mug', 'bowl'} and 'hand_object_interaction' in d.detection and d.detection['hand_object_interaction'] > 0.5:
+                if self.xmemScore(d, o) and 'hand_object_interaction' in d.detection and d.detection['hand_object_interaction'] > 0.5:
                     score += self.score_threshold
                 if score > self.score_threshold:
                     scores.append((-score, idx, k))
@@ -131,7 +131,7 @@ class Memory:
             if det_i not in matching and detections[det_i].confidence > self.new_tracklet_threshold:
                 archived_candidate, min_distance = None, RESPAWN_HAND_DISTANCE_THRESHOLD
                 for k, obj in self.archived_objects.items():
-                    if obj.label == d.label and np.linalg.norm(obj.pos - d.pos) < (min_distance if 'hand_object_interaction' in d.detection and d.detection['hand_object_interaction'] > 0.5 else min(min_distance, RESPAWN_DISTANCE_THRESHOLD)):
+                    if obj.get_label() == d.label and np.linalg.norm(obj.pos - d.pos) < (min_distance if 'hand_object_interaction' in d.detection and d.detection['hand_object_interaction'] > 0.5 else min(min_distance, RESPAWN_DISTANCE_THRESHOLD)):
                         archived_candidate, min_distance = k, np.linalg.norm(obj.pos - d.pos)
                 if archived_candidate is not None:
                     self.objects[archived_candidate] = self.archived_objects[archived_candidate]
